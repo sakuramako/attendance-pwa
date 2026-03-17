@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>出席簿</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+body {
+  font-size: 20px;
+  padding: 15px;
+}
+
+input[type="checkbox"] {
+  transform: scale(1.5);
+  margin-right: 10px;
+}
+
+button {
+  font-size: 20px;
+  padding: 10px;
+  margin-top: 10px;
+}
+
+input {
+  font-size: 18px;
+  margin: 5px 0;
+}
+</style>
+<link rel="manifest" href="manifest.json">
+</head>
+<body>
+
+<h1>出席簿</h1>
+日付: <input type="date" id="date"><br><br>
+
+<input type="file" id="fileInput">
+
+<div id="controls" style="margin-top: 10px;">
+  宣教師: <input type="number" id="missionary" value="0"><br>
+  求道者: <input type="number" id="investigator" value="0"><br>
+  訪問者: <input type="number" id="visitor" value="0"><br>
+</div>
+
+<h2>名簿</h2>
+<div id="list"></div>
+
+<button onclick="exportCSV()">CSV出力</button>
+
+<script>
+let names = [];
+let attendance = {};
+
+document.getElementById("fileInput").addEventListener("change", function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = function(e) {
+    const text = e.target.result;
+    names = text.split(/\r?\n/).map(n => n.trim()).filter(n => n);
+
+    saveData();
+    render();
+  };
+
+  reader.readAsText(file);
+});
+
+function render() {
+  const list = document.getElementById("list");
+  list.innerHTML = "";
+
+  names.forEach(name => {
+    const div = document.createElement("div");
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.checked = attendance[name] || false;
+
+    checkbox.onchange = () => {
+      attendance[name] = checkbox.checked;
+      saveData();
+    };
+
+    div.appendChild(checkbox);
+    div.appendChild(document.createTextNode(" " + name));
+
+    list.appendChild(div);
+  });
+}
+
+function exportCSV() {
+  const date = document.getElementById("date").value;
+  const missionary = document.getElementById("missionary").value;
+  const investigator = document.getElementById("investigator").value;
+  const visitor = document.getElementById("visitor").value;
+
+  let csv = "date,name,present,missionary,investigator,visitor\n";
+
+  names.forEach(name => {
+    const present = attendance[name] ? 1 : 0;
+    csv += `${date},${name},${present},${missionary},${investigator},${visitor}\n`;
+  });
+
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "attendance.csv";
+  a.click();
+
+  URL.revokeObjectURL(url);
+}
+
+function saveData() {
+  const data = {
+    names: names,
+    attendance: attendance,
+    missionary: document.getElementById("missionary").value,
+    investigator: document.getElementById("investigator").value,
+    visitor: document.getElementById("visitor").value,
+    date: document.getElementById("date").value
+  };
+
+  localStorage.setItem("attendanceData", JSON.stringify(data));
+}
+
+document.getElementById("missionary").onchange = saveData;
+document.getElementById("investigator").onchange = saveData;
+document.getElementById("visitor").onchange = saveData;
+document.getElementById("date").onchange = saveData;
+
+function loadData() {
+  const saved = localStorage.getItem("attendanceData");
+  if (!saved) return;
+
+  const data = JSON.parse(saved);
+
+  names = data.names || [];
+  attendance = data.attendance || {};
+
+  document.getElementById("missionary").value = data.missionary || 0;
+  document.getElementById("investigator").value = data.investigator || 0;
+  document.getElementById("visitor").value = data.visitor || 0;
+  document.getElementById("date").value = data.date || "";
+
+  render();
+}
+
+loadData();
+</script>
+
+</body>
+</html>
