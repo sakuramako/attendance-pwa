@@ -310,29 +310,40 @@ function bindEvents() {
         list.appendChild(div);
       });
     }
-
-   function exportCSV() {
+   
+function exportCSV() {
   const date = document.getElementById("date").value;
   const missionary = document.getElementById("missionary").value;
   const investigator = document.getElementById("investigator").value;
   const visitor = document.getElementById("visitor").value;
-  const comment = document.getElementById("comment").value;
+  const commentRaw = document.getElementById("comment")
+    ? document.getElementById("comment").value
+    : "";
+
+  // アプリ版互換：
+  // 改行を実改行ではなく \n 文字列にする
+  // 末尾にも \n を付ける
+  const commentForCsv = commentRaw
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .replace(/\n/g, "\\n") + "\\n";
 
   let csv = "";
 
-  // アプリ版と同じコメント行
-  csv += `comment,${escapeCsv(comment)}\n`;
+  // 1行目：comment
+  csv += `comment,${escapeCsv(commentForCsv)}\n`;
 
-  // 通常ヘッダ
+  // 2行目：header
   csv += "date,name,present,missionary,investigator,visitor\n";
 
-  // 出席データ
+  // 3行目以降：データ
   names.forEach(name => {
     const present = attendance[name] ? 1 : 0;
     csv += `${escapeCsv(date)},${escapeCsv(name)},${present},${escapeCsv(missionary)},${escapeCsv(investigator)},${escapeCsv(visitor)}\n`;
   });
 
-  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  // BOMなしで出力（アプリ版に合わせる）
+const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
 
   const a = document.createElement("a");
