@@ -5,152 +5,367 @@
   <title>出席簿</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-body {
-  font-size: 20px;
-  padding: 15px;
-}
+    body {
+      font-size: 20px;
+      padding: 15px;
+      line-height: 1.6;
+    }
 
-input[type="checkbox"] {
-  transform: scale(1.5);
-  margin-right: 10px;
-}
+    h1, h2 {
+      margin-bottom: 10px;
+    }
 
-button {
-  font-size: 20px;
-  padding: 10px;
-  margin-top: 10px;
-}
+    input[type="checkbox"] {
+      transform: scale(1.5);
+      margin-right: 10px;
+    }
 
-input {
-  font-size: 18px;
-  margin: 5px 0;
-}
-</style>
-<link rel="manifest" href="manifest.json">
+    button {
+      font-size: 20px;
+      padding: 10px;
+      margin-top: 10px;
+      margin-right: 8px;
+    }
+
+    input, select {
+      font-size: 18px;
+      margin: 5px 0;
+      padding: 6px;
+    }
+
+    .section {
+      margin-top: 18px;
+      margin-bottom: 18px;
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+
+    .note {
+      font-size: 14px;
+      color: #666;
+      margin-top: 8px;
+    }
+
+    .name-row {
+      margin-bottom: 8px;
+    }
+  </style>
+
+  <link rel="manifest" href="manifest.json">
 </head>
 <body>
 
-<h1>出席簿</h1>
-日付: <input type="date" id="date"><br><br>
+  <h1>出席簿</h1>
 
-<input type="file" id="fileInput" accept=".csv,text/csv">
+  日付: <input type="date" id="date"><br><br>
 
-<div id="controls" style="margin-top: 10px;">
-  宣教師: <input type="number" id="missionary" value="0"><br>
-  求道者: <input type="number" id="investigator" value="0"><br>
-  訪問者: <input type="number" id="visitor" value="0"><br>
-</div>
+  <div class="section">
+    <h2>名簿の読込</h2>
 
-<h2>名簿</h2>
-<div id="list"></div>
+    <div>
+      <label for="sheetSelect">Google名簿:</label>
+      <select id="sheetSelect"></select>
+      <button type="button" id="loadSheetBtn">名簿読込</button>
+    </div>
 
-<button onclick="exportCSV()">CSV出力</button>
+    <div class="note">
+      Googleスプレッドシートの各シートから名簿を読み込みます。
+    </div>
 
-<script>
-let names = [];
-let attendance = {};
+    <hr style="margin: 16px 0;">
 
-document.getElementById("fileInput").addEventListener("change", function(e) {
-  const file = e.target.files[0];
-  if (!file) return;
+    <div>
+      <input type="file" id="fileInput" accept=".csv,text/csv">
+    </div>
 
-  const reader = new FileReader();
+    <div class="note">
+      ※iPhoneでCSVを直接読む場合は、Google Driveからではなく iCloud Drive または「このiPhone内」経由の方が安定しやすいです。
+    </div>
+  </div>
 
-  reader.onload = function(e) {
-    const text = e.target.result;
-    names = text.split(/\r?\n/).map(n => n.trim()).filter(n => n);
+  <div id="controls" class="section">
+    <h2>人数</h2>
+    宣教師: <input type="number" id="missionary" value="0"><br>
+    求道者: <input type="number" id="investigator" value="0"><br>
+    訪問者: <input type="number" id="visitor" value="0"><br>
+  </div>
 
-    saveData();
-    render();
-  };
+  <div class="section">
+    <h2>名簿</h2>
+    <div id="currentSource" class="note">現在の名簿: なし</div>
+    <div id="list"></div>
+  </div>
 
-  reader.readAsText(file);
-});
+  <button onclick="exportCSV()">CSV出力</button>
 
-function render() {
-  const list = document.getElementById("list");
-  list.innerHTML = "";
+  <script>
+    let names = [];
+    let attendance = {};
 
-  names.forEach(name => {
-    const div = document.createElement("div");
+    // =========================
+    // ここを自分のシート情報に合わせる
+    // =========================
+    const SHEET_ID = "1cdU9TeB5dgmbtpNZq7x5_Kc4SsMiAub98yqzCjmw1ts";
 
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.checked = attendance[name] || false;
+    const SHEETS = [
+      { name: "神権会", gid: "0" },
+      { name: "扶助協会", gid: "1477536557" },
+      { name: "青少年", gid: "1212232786" }
+    ];
 
-    checkbox.onchange = () => {
-      attendance[name] = checkbox.checked;
+    // =========================
+    // 初期化
+    // =========================
+    initSheetSelect();
+    bindEvents();
+    loadData();
+
+    function bindEvents() {
+      document.getElementById("fileInput").addEventListener("change", function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+
+        reader.onload = function(event) {
+          const text = event.target.result;
+          loadCsvText(text, "CSVファイル");
+        };
+
+        reader.readAsText(file);
+      });
+
+      document.getElementById("loadSheetBtn").addEventListener("click", loadSelectedSheet);
+      document.getElementById("missionary").onchange = saveData;
+      document.getElementById("investigator").onchange = saveData;
+      document.getElementById("visitor").onchange = saveData;
+      document.getElementById("date").onchange = saveData;
+    }
+
+    function initSheetSelect() {
+      const select = document.getElementById("sheetSelect");
+      select.innerHTML = "";
+
+      SHEETS.forEach((sheet, index) => {
+        const option = document.createElement("option");
+        option.value = index;
+        option.textContent = sheet.name;
+        select.appendChild(option);
+      });
+    }
+
+    async function loadSelectedSheet() {
+      const select = document.getElementById("sheetSelect");
+      const index = select.value;
+      const sheet = SHEETS[index];
+
+      if (!sheet) {
+        alert("名簿を選んでください");
+        return;
+      }
+
+      if (!sheet.gid || sheet.gid.includes("ここに")) {
+        alert(sheet.name + " の gid がまだ設定されていません");
+        return;
+      }
+
+      const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${sheet.gid}`;
+
+      try {
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error("取得失敗: " + response.status);
+        }
+
+        const text = await response.text();
+        loadCsvText(text, "Google名簿: " + sheet.name);
+        alert(sheet.name + " を読み込みました");
+      } catch (error) {
+        console.error(error);
+        alert("Google名簿の読み込みに失敗しました。\n共有設定やgidを確認してください。");
+      }
+    }
+
+    function loadCsvText(text, sourceName = "") {
+      const parsedNames = parseNameList(text);
+
+      if (parsedNames.length === 0) {
+        alert("名簿データを読み取れませんでした");
+        return;
+      }
+
+      names = parsedNames;
+
+      // 既存の出欠を可能な範囲で引き継ぐ
+      const oldAttendance = attendance;
+      attendance = {};
+
+      names.forEach(name => {
+        attendance[name] = oldAttendance[name] || false;
+      });
+
+      render();
+
+      if (sourceName) {
+        document.getElementById("currentSource").textContent = "現在の名簿: " + sourceName;
+      }
+
       saveData();
-    };
+    }
 
-    div.appendChild(checkbox);
-    div.appendChild(document.createTextNode(" " + name));
+    function parseNameList(text) {
+      const lines = text
+        .replace(/^\uFEFF/, "") // BOM除去
+        .split(/\r?\n/)
+        .map(line => line.trim())
+        .filter(line => line !== "");
 
-    list.appendChild(div);
-  });
-}
+      const result = [];
 
-function exportCSV() {
-  const date = document.getElementById("date").value;
-  const missionary = document.getElementById("missionary").value;
-  const investigator = document.getElementById("investigator").value;
-  const visitor = document.getElementById("visitor").value;
+      for (const line of lines) {
+        const cols = splitCsvLine(line);
 
-  let csv = "date,name,present,missionary,investigator,visitor\n";
+        // 1列だけならそのまま名前
+        if (cols.length === 1) {
+          const fullName = cols[0].trim();
+          if (fullName) result.push(fullName);
+          continue;
+        }
 
-  names.forEach(name => {
-    const present = attendance[name] ? 1 : 0;
-    csv += `${date},${name},${present},${missionary},${investigator},${visitor}\n`;
-  });
+        // 2列以上なら A列=姓, B列=名 を優先して結合
+        const first = (cols[0] || "").trim();
+        const second = (cols[1] || "").trim();
 
-  const blob = new Blob([csv], { type: "text/csv" });
-  const url = URL.createObjectURL(blob);
+        if (first && second) {
+          result.push(first + " " + second);
+        } else if (first) {
+          result.push(first);
+        } else if (second) {
+          result.push(second);
+        }
+      }
 
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "attendance.csv";
-  a.click();
+      return result;
+    }
 
-  URL.revokeObjectURL(url);
-}
+    function splitCsvLine(line) {
+      const result = [];
+      let current = "";
+      let inQuotes = false;
 
-function saveData() {
-  const data = {
-    names: names,
-    attendance: attendance,
-    missionary: document.getElementById("missionary").value,
-    investigator: document.getElementById("investigator").value,
-    visitor: document.getElementById("visitor").value,
-    date: document.getElementById("date").value
-  };
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
 
-  localStorage.setItem("attendanceData", JSON.stringify(data));
-}
+        if (char === '"') {
+          if (inQuotes && line[i + 1] === '"') {
+            current += '"';
+            i++;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (char === "," && !inQuotes) {
+          result.push(current);
+          current = "";
+        } else {
+          current += char;
+        }
+      }
 
-document.getElementById("missionary").onchange = saveData;
-document.getElementById("investigator").onchange = saveData;
-document.getElementById("visitor").onchange = saveData;
-document.getElementById("date").onchange = saveData;
+      result.push(current);
+      return result;
+    }
 
-function loadData() {
-  const saved = localStorage.getItem("attendanceData");
-  if (!saved) return;
+    function render() {
+      const list = document.getElementById("list");
+      list.innerHTML = "";
 
-  const data = JSON.parse(saved);
+      names.forEach(name => {
+        const div = document.createElement("div");
+        div.className = "name-row";
 
-  names = data.names || [];
-  attendance = data.attendance || {};
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = attendance[name] || false;
 
-  document.getElementById("missionary").value = data.missionary || 0;
-  document.getElementById("investigator").value = data.investigator || 0;
-  document.getElementById("visitor").value = data.visitor || 0;
-  document.getElementById("date").value = data.date || "";
+        checkbox.onchange = () => {
+          attendance[name] = checkbox.checked;
+          saveData();
+        };
 
-  render();
-}
+        div.appendChild(checkbox);
+        div.appendChild(document.createTextNode(" " + name));
+        list.appendChild(div);
+      });
+    }
 
-loadData();
-</script>
+    function exportCSV() {
+      const date = document.getElementById("date").value;
+      const missionary = document.getElementById("missionary").value;
+      const investigator = document.getElementById("investigator").value;
+      const visitor = document.getElementById("visitor").value;
+
+      let csv = "date,name,present,missionary,investigator,visitor\n";
+
+      names.forEach(name => {
+        const present = attendance[name] ? 1 : 0;
+        csv += `${escapeCsv(date)},${escapeCsv(name)},${present},${escapeCsv(missionary)},${escapeCsv(investigator)},${escapeCsv(visitor)}\n`;
+      });
+
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "attendance.csv";
+      a.click();
+
+      URL.revokeObjectURL(url);
+    }
+
+    function escapeCsv(value) {
+      const str = String(value ?? "");
+      if (str.includes(",") || str.includes('"') || str.includes("\n")) {
+        return '"' + str.replace(/"/g, '""') + '"';
+      }
+      return str;
+    }
+
+    function saveData() {
+      const data = {
+        names: names,
+        attendance: attendance,
+        missionary: document.getElementById("missionary").value,
+        investigator: document.getElementById("investigator").value,
+        visitor: document.getElementById("visitor").value,
+        date: document.getElementById("date").value,
+        currentSourceText: document.getElementById("currentSource").textContent
+      };
+
+      localStorage.setItem("attendanceData", JSON.stringify(data));
+    }
+
+    function loadData() {
+      const saved = localStorage.getItem("attendanceData");
+      if (!saved) return;
+
+      const data = JSON.parse(saved);
+
+      names = data.names || [];
+      attendance = data.attendance || {};
+
+      document.getElementById("missionary").value = data.missionary || 0;
+      document.getElementById("investigator").value = data.investigator || 0;
+      document.getElementById("visitor").value = data.visitor || 0;
+      document.getElementById("date").value = data.date || "";
+
+      if (data.currentSourceText) {
+        document.getElementById("currentSource").textContent = data.currentSourceText;
+      }
+
+      render();
+    }
+  </script>
 
 </body>
 </html>
