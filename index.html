@@ -71,10 +71,7 @@
     
     <hr style="margin: 16px 0;">
 
-    <div>
-      <input type="file" id="fileInput" accept=".csv,text/csv">
-    </div>
-
+   
     
   </div>
 
@@ -107,36 +104,20 @@
       { name: "扶助協会", gid: "1477536557" },
       { name: "青少年", gid: "1212232786" }
     ];
+// =========================
+// 初期化
+// =========================
+initSheetSelect();
+bindEvents();
+loadData();
 
-    // =========================
-    // 初期化
-    // =========================
-    initSheetSelect();
-    bindEvents();
-    loadData();
-
-    function bindEvents() {
-      document.getElementById("fileInput").addEventListener("change", function(e) {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-
-        reader.onload = function(event) {
-          const text = event.target.result;
-          loadCsvText(text, "CSVファイル");
-        };
-
-        reader.readAsText(file);
-      });
-
-      document.getElementById("loadSheetBtn").addEventListener("click", loadSelectedSheet);
-      document.getElementById("missionary").onchange = saveData;
-      document.getElementById("investigator").onchange = saveData;
-      document.getElementById("visitor").onchange = saveData;
-      document.getElementById("date").onchange = saveData;
-    }
-
+function bindEvents() {
+  document.getElementById("loadSheetBtn").addEventListener("click", loadSelectedSheet);
+  document.getElementById("missionary").onchange = saveData;
+  document.getElementById("investigator").onchange = saveData;
+  document.getElementById("visitor").onchange = saveData;
+  document.getElementById("date").onchange = saveData;
+}
     function initSheetSelect() {
       const select = document.getElementById("sheetSelect");
       select.innerHTML = "";
