@@ -102,7 +102,12 @@
   <select id="visitor"></select><br>
 </div>
 
-  <button onclick="exportCSV()">CSV出力</button>
+<div class="section">
+  <h2>コメント</h2>
+  <textarea id="comment" rows="5" style="width:100%; font-size:18px; padding:8px; box-sizing:border-box;"></textarea>
+</div>
+
+<button onclick="exportCSV()">CSV出力</button>
 
 
   <script>
@@ -148,6 +153,7 @@ function bindEvents() {
   document.getElementById("investigator").onchange = saveData;
   document.getElementById("visitor").onchange = saveData;
   document.getElementById("date").onchange = saveData;
+  document.getElementById("comment").oninput = saveData;
 }
     function initSheetSelect() {
       const select = document.getElementById("sheetSelect");
@@ -305,29 +311,37 @@ function bindEvents() {
       });
     }
 
-    function exportCSV() {
-      const date = document.getElementById("date").value;
-      const missionary = document.getElementById("missionary").value;
-      const investigator = document.getElementById("investigator").value;
-      const visitor = document.getElementById("visitor").value;
+   function exportCSV() {
+  const date = document.getElementById("date").value;
+  const missionary = document.getElementById("missionary").value;
+  const investigator = document.getElementById("investigator").value;
+  const visitor = document.getElementById("visitor").value;
+  const comment = document.getElementById("comment").value;
 
-      let csv = "date,name,present,missionary,investigator,visitor\n";
+  let csv = "";
 
-      names.forEach(name => {
-        const present = attendance[name] ? 1 : 0;
-        csv += `${escapeCsv(date)},${escapeCsv(name)},${present},${escapeCsv(missionary)},${escapeCsv(investigator)},${escapeCsv(visitor)}\n`;
-      });
+  // アプリ版と同じコメント行
+  csv += `comment,${escapeCsv(comment)}\n`;
 
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
+  // 通常ヘッダ
+  csv += "date,name,present,missionary,investigator,visitor\n";
 
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "attendance.csv";
-      a.click();
+  // 出席データ
+  names.forEach(name => {
+    const present = attendance[name] ? 1 : 0;
+    csv += `${escapeCsv(date)},${escapeCsv(name)},${present},${escapeCsv(missionary)},${escapeCsv(investigator)},${escapeCsv(visitor)}\n`;
+  });
 
-      URL.revokeObjectURL(url);
-    }
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "attendance.csv";
+  a.click();
+
+  URL.revokeObjectURL(url);
+}
 
 function resetAll() {
   if (!confirm("すべてリセットして今日の日付にしますか？")) return;
@@ -341,6 +355,9 @@ function resetAll() {
   document.getElementById("missionary").value = 0;
   document.getElementById("investigator").value = 0;
   document.getElementById("visitor").value = 0;
+
+  // コメントリセット
+  document.getElementById("comment").value = "";
 
   // 今日の日付セット
   const today = new Date();
@@ -363,40 +380,42 @@ function resetAll() {
       return str;
     }
 
-    function saveData() {
-      const data = {
-        names: names,
-        attendance: attendance,
-        missionary: document.getElementById("missionary").value,
-        investigator: document.getElementById("investigator").value,
-        visitor: document.getElementById("visitor").value,
-        date: document.getElementById("date").value,
-        currentSourceText: document.getElementById("currentSource").textContent
-      };
+   function saveData() {
+  const data = {
+    names: names,
+    attendance: attendance,
+    missionary: document.getElementById("missionary").value,
+    investigator: document.getElementById("investigator").value,
+    visitor: document.getElementById("visitor").value,
+    comment: document.getElementById("comment").value,
+    date: document.getElementById("date").value,
+    currentSourceText: document.getElementById("currentSource").textContent
+  };
 
-      localStorage.setItem("attendanceData", JSON.stringify(data));
-    }
+  localStorage.setItem("attendanceData", JSON.stringify(data));
+}
 
     function loadData() {
-      const saved = localStorage.getItem("attendanceData");
-      if (!saved) return;
+  const saved = localStorage.getItem("attendanceData");
+  if (!saved) return;
 
-      const data = JSON.parse(saved);
+  const data = JSON.parse(saved);
 
-      names = data.names || [];
-      attendance = data.attendance || {};
+  names = data.names || [];
+  attendance = data.attendance || {};
 
-      document.getElementById("missionary").value = data.missionary || 0;
-      document.getElementById("investigator").value = data.investigator || 0;
-      document.getElementById("visitor").value = data.visitor || 0;
-      document.getElementById("date").value = data.date || "";
+  document.getElementById("missionary").value = data.missionary || 0;
+  document.getElementById("investigator").value = data.investigator || 0;
+  document.getElementById("visitor").value = data.visitor || 0;
+  document.getElementById("comment").value = data.comment || "";
+  document.getElementById("date").value = data.date || "";
 
-      if (data.currentSourceText) {
-        document.getElementById("currentSource").textContent = data.currentSourceText;
-      }
+  if (data.currentSourceText) {
+    document.getElementById("currentSource").textContent = data.currentSourceText;
+  }
 
-      render();
-    }
+  render();
+}
   </script>
 
 </body>
