@@ -314,7 +314,7 @@ function bindEvents() {
       });
     }
    
-function exportCSV() {
+async function exportCSV() {
   const date = document.getElementById("date").value;
   const missionary = document.getElementById("missionary").value;
   const investigator = document.getElementById("investigator").value;
@@ -323,37 +323,68 @@ function exportCSV() {
     ? document.getElementById("comment").value
     : "";
 
-  // アプリ版互換：
-  // 改行を実改行ではなく \n 文字列にする
-  // 末尾にも \n を付ける
+  // アプリ版互換
   const commentForCsv = commentRaw
     .replace(/\r\n/g, "\n")
     .replace(/\r/g, "\n")
     .replace(/\n/g, "\\n") + "\\n";
 
   let csv = "";
-
-  // 1行目：comment
   csv += `comment,${escapeCsv(commentForCsv)}\n`;
-
-  // 2行目：header
   csv += "date,name,present,missionary,investigator,visitor\n";
 
-  // 3行目以降：データ
   names.forEach(name => {
     const present = attendance[name] ? 1 : 0;
     csv += `${escapeCsv(date)},${escapeCsv(name)},${present},${escapeCsv(missionary)},${escapeCsv(investigator)},${escapeCsv(visitor)}\n`;
   });
 
-  // BOMなしで出力（アプリ版に合わせる）
-const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
+  const fileName = `attendance_${date || "nodate"}.csv`;
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const file = new File([blob], fileName, { type: "text/csv" });
 
+  // 1) まず共有を試す（iPhone / Android で外部へ出しやすい）
+  try {
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({
+        files: [file],
+        title: fileName
+      });
+      return;
+    }
+  } catch (e) {
+    console.log("share(files)失敗:", e);
+  }
+
+  // 2) 次に保存ダイアログを試す（主に対応ブラウザ向け）
+  try {
+    if (window.showSaveFilePicker) {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: fileName,
+        types: [
+          {
+            description: "CSV file",
+            accept: { "text/csv": [".csv"] }
+          }
+        ]
+      });
+
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      return;
+    }
+  } catch (e) {
+    console.log("showSaveFilePicker失敗またはキャンセル:", e);
+  }
+
+  // 3) 最後の保険：従来のダウンロード
+  const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = "attendance.csv";
+  a.download = fileName;
+  document.body.appendChild(a);
   a.click();
-
+  a.remove();
   URL.revokeObjectURL(url);
 }
 
