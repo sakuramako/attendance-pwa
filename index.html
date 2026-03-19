@@ -115,6 +115,11 @@
 
   訪問者:
   <select id="visitor"></select><br>
+
+  <div id="totalCount" style="margin-top:10px; font-weight:bold;">
+    合計: 0
+  </div>
+
 </div>
 
 <div class="section">
@@ -167,9 +172,20 @@ loadData();
 
 function bindEvents() {
   document.getElementById("loadSheetBtn").addEventListener("click", loadSelectedSheet);
-  document.getElementById("missionary").onchange = saveData;
-  document.getElementById("investigator").onchange = saveData;
-  document.getElementById("visitor").onchange = saveData;
+  document.getElementById("missionary").onchange = () => {
+  saveData();
+  updateTotalCount();
+};
+
+document.getElementById("investigator").onchange = () => {
+  saveData();
+  updateTotalCount();
+};
+
+document.getElementById("visitor").onchange = () => {
+  saveData();
+  updateTotalCount();
+};
   document.getElementById("date").onchange = saveData;
   document.getElementById("comment").oninput = saveData;
 }
@@ -209,7 +225,7 @@ function bindEvents() {
     }
 
     const text = await response.text();
-    loadCsvText(text, "Google名簿: " + sheet.name, sheet.codes);
+    loadCsvText(text, sheet.name, sheet.codes);
     alert(sheet.name + " を読み込みました");
   } catch (error) {
     console.error(error);
@@ -310,27 +326,30 @@ function bindEvents() {
     }
 
     function render() {
-      const list = document.getElementById("list");
-      list.innerHTML = "";
+  const list = document.getElementById("list");
+  list.innerHTML = "";
 
-      names.forEach(name => {
-        const div = document.createElement("div");
-        div.className = "name-row";
+  names.forEach(name => {
+    const div = document.createElement("div");
+    div.className = "name-row";
 
-        const checkbox = document.createElement("input");
-        checkbox.type = "checkbox";
-        checkbox.checked = attendance[name] || false;
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.checked = attendance[name] || false;
 
-        checkbox.onchange = () => {
-          attendance[name] = checkbox.checked;
-          saveData();
-        };
+    checkbox.onchange = () => {
+      attendance[name] = checkbox.checked;
+      saveData();
+      updateTotalCount(); // ← 追加
+    };
 
-        div.appendChild(checkbox);
-        div.appendChild(document.createTextNode(" " + name));
-        list.appendChild(div);
-      });
-    }
+    div.appendChild(checkbox);
+    div.appendChild(document.createTextNode(" " + name));
+    list.appendChild(div);
+  });
+
+  updateTotalCount(); // ← ここも追加
+}
    
 async function exportCSV() {
   const date = document.getElementById("date").value;
@@ -478,6 +497,24 @@ function resetAll() {
   }
 
   render();
+  updateTotalCount();
+}
+
+function updateTotalCount() {
+  // ✓の人数
+  let presentCount = 0;
+  names.forEach(name => {
+    if (attendance[name]) presentCount++;
+  });
+
+  // 各人数
+  const missionary = parseInt(document.getElementById("missionary").value || 0);
+  const investigator = parseInt(document.getElementById("investigator").value || 0);
+  const visitor = parseInt(document.getElementById("visitor").value || 0);
+
+  const total = presentCount + missionary + investigator + visitor;
+
+  document.getElementById("totalCount").textContent = "合計: " + total;
 }
   </script>
 
