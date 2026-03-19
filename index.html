@@ -122,11 +122,14 @@
     const SHEET_ID = "1cdU9TeB5dgmbtpNZq7x5_Kc4SsMiAub98yqzCjmw1ts";
 
     const SHEETS = [
-      { name: "聖餐会", gid: "0" },
-       { name: "日曜学校", gid: "1698240526" },
-      { name: "神権会", gid: "1477536557" },
-      { name: "扶助協会", gid: "1212232786" }
-    ];
+  { name: "聖餐会", gid: "0", codes: ["ALL"] },
+  { name: "日曜学校", gid: "0", codes: ["EQ", "RS"] },
+  { name: "神権会", gid: "0", codes: ["EQ"] },
+  { name: "扶助協会", gid: "0", codes: ["RS"] },
+  { name: "アロン神権定員会", gid: "0", codes: ["YM"] },
+  { name: "若い女性", gid: "0", codes: ["YW"] },
+  { name: "プライマリー", gid: "0", codes: ["PR"] }
+];
 // =========================
 // 初期化
 // =========================
@@ -170,99 +173,102 @@ function bindEvents() {
       });
     }
 
-    async function loadSelectedSheet() {
-      const select = document.getElementById("sheetSelect");
-      const index = select.value;
-      const sheet = SHEETS[index];
+     async function loadSelectedSheet() {
+  const select = document.getElementById("sheetSelect");
+  const index = select.value;
+  const sheet = SHEETS[index];
 
-      if (!sheet) {
-        alert("名簿を選んでください");
-        return;
-      }
+  if (!sheet) {
+    alert("名簿を選んでください");
+    return;
+  }
 
-      if (!sheet.gid || sheet.gid.includes("ここに")) {
-        alert(sheet.name + " の gid がまだ設定されていません");
-        return;
-      }
+  if (!sheet.gid || sheet.gid.includes("ここに")) {
+    alert(sheet.name + " の gid がまだ設定されていません");
+    return;
+  }
 
-      const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${sheet.gid}`;
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${sheet.gid}`;
 
-      try {
-        const response = await fetch(url);
-        if (!response.ok) {
-          throw new Error("取得失敗: " + response.status);
-        }
-
-        const text = await response.text();
-        loadCsvText(text, "Google名簿: " + sheet.name);
-        alert(sheet.name + " を読み込みました");
-      } catch (error) {
-        console.error(error);
-        alert("Google名簿の読み込みに失敗しました。\n共有設定やgidを確認してください。");
-      }
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error("取得失敗: " + response.status);
     }
 
-    function loadCsvText(text, sourceName = "") {
-      const parsedNames = parseNameList(text);
+    const text = await response.text();
+    loadCsvText(text, "Google名簿: " + sheet.name, sheet.codes);
+    alert(sheet.name + " を読み込みました");
+  } catch (error) {
+    console.error(error);
+    alert("Google名簿の読み込みに失敗しました。\n共有設定やgidを確認してください。");
+  }
+}
 
-      if (parsedNames.length === 0) {
-        alert("名簿データを読み取れませんでした");
-        return;
-      }
+   function parseFilteredNameList(text, targetCodes) {
+  const lines = text
+    .replace(/^\uFEFF/, "")
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(line => line !== "");
 
-      names = parsedNames;
+  const normalizedCodes = targetCodes.map(code => code.toUpperCase());
+  const result = [];
 
-      // 既存の出欠を可能な範囲で引き継ぐ
-      const oldAttendance = attendance;
-      attendance = {};
+  lines.forEach((line, index) => {
+    const cols = splitCsvLine(line);
 
-      names.forEach(name => {
-        attendance[name] = oldAttendance[name] || false;
-      });
+    // 1行目は見出し
+    if (index === 0) return;
 
-      render();
+    const fullName = (cols[0] || "").trim();
+    const groupCode = (cols[1] || "").trim().toUpperCase();
 
-      if (sourceName) {
-        document.getElementById("currentSource").textContent = "現在の名簿: " + sourceName;
-      }
+    if (!fullName) return;
 
-      saveData();
+    // 聖餐会は全員
+    if (normalizedCodes.includes("ALL")) {
+      result.push(fullName);
+      return;
     }
 
-    function parseNameList(text) {
-      const lines = text
-        .replace(/^\uFEFF/, "") // BOM除去
-        .split(/\r?\n/)
-        .map(line => line.trim())
-        .filter(line => line !== "");
-
-      const result = [];
-
-      for (const line of lines) {
-        const cols = splitCsvLine(line);
-
-        // 1列だけならそのまま名前
-        if (cols.length === 1) {
-          const fullName = cols[0].trim();
-          if (fullName) result.push(fullName);
-          continue;
-        }
-
-        // 2列以上なら A列=姓, B列=名 を優先して結合
-        const first = (cols[0] || "").trim();
-        const second = (cols[1] || "").trim();
-
-        if (first && second) {
-          result.push(first + second);
-        } else if (first) {
-          result.push(first);
-        } else if (second) {
-          result.push(second);
-        }
-      }
-
-      return result;
+    // 所属一致なら追加
+    if (normalizedCodes.includes(groupCode)) {
+      result.push(fullName);
     }
+  });
+
+  return result;
+}
+
+
+    
+
+    function loadCsvText(text, sourceName = "", targetCodes = []) {
+  const parsedNames = parseFilteredNameList(text, targetCodes);
+
+  if (parsedNames.length === 0) {
+    alert("名簿データを読み取れませんでした");
+    return;
+  }
+
+  names = parsedNames;
+
+  const oldAttendance = attendance;
+  attendance = {};
+
+  names.forEach(name => {
+    attendance[name] = oldAttendance[name] || false;
+  });
+
+  render();
+
+  if (sourceName) {
+    document.getElementById("currentSource").textContent = "現在の名簿: " + sourceName;
+  }
+
+  saveData();
+}
 
     function splitCsvLine(line) {
       const result = [];
