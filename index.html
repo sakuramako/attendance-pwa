@@ -52,6 +52,21 @@
     .name-row {
       margin-bottom: 8px;
     }
+
+    #comment {
+  width: 100%;
+  font-size: 18px;
+  padding: 8px;
+  box-sizing: border-box;
+
+  border: none;
+  outline: none;
+  background: transparent;
+}
+
+#comment::placeholder {
+  color: #aaa;
+}
   </style>
 
   <link rel="manifest" href="manifest.json">
@@ -82,9 +97,7 @@
     
   </div>
 
-  <div id="controls" class="section">
-   
-  </div>
+  
 
   <div class="section">
     <h2>名簿</h2>
@@ -105,8 +118,7 @@
 </div>
 
 <div class="section">
-  <h2>メモ</h2>
-  <textarea id="comment" rows="5" style="width:100%; font-size:18px; padding:8px; box-sizing:border-box;"></textarea>
+  <textarea id="comment" rows="5" placeholder="メモ"></textarea>
 </div>
 
 <button onclick="exportCSV()">CSV出力</button>
