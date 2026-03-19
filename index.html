@@ -139,13 +139,13 @@
     const SHEET_ID = "1cdU9TeB5dgmbtpNZq7x5_Kc4SsMiAub98yqzCjmw1ts";
 
     const SHEETS = [
-  { name: "聖餐会", gid: "0", codes: ["ALL"] },
-  { name: "日曜学校", gid: "0", codes: ["EQ", "RS"] },
-  { name: "神権会", gid: "0", codes: ["EQ"] },
-  { name: "扶助協会", gid: "0", codes: ["RS"] },
-  { name: "アロン神権定員会", gid: "0", codes: ["YM"] },
-  { name: "若い女性", gid: "0", codes: ["YW"] },
-  { name: "プライマリー", gid: "0", codes: ["PR"] }
+  { name: "聖餐会", gid: "0", codes: ["ALL"], short: "SAC" },
+  { name: "日曜学校", gid: "0", codes: ["EQ", "RS"], short: "SS" },
+  { name: "神権会", gid: "0", codes: ["EQ"], short: "EQ" },
+  { name: "扶助協会", gid: "0", codes: ["RS"], short: "RS" },
+  { name: "アロン神権定員会", gid: "0", codes: ["YM"], short: "YM" },
+  { name: "若い女性", gid: "0", codes: ["YW"], short: "YW" },
+  { name: "プライマリー", gid: "0", codes: ["PR"], short: "PR" }
 ];
 // =========================
 // 初期化
@@ -356,10 +356,13 @@ async function exportCSV() {
   const missionary = document.getElementById("missionary").value;
   const investigator = document.getElementById("investigator").value;
   const visitor = document.getElementById("visitor").value;
+const sheetIndex = document.getElementById("sheetSelect").value;
+  const sheet = SHEETS[sheetIndex];
+  const sheetCode = sheet?.short || "UNK";
+
   const commentRaw = document.getElementById("comment")
     ? document.getElementById("comment").value
     : "";
-
   // アプリ版互換
   const commentForCsv = commentRaw
     .replace(/\r\n/g, "\n")
@@ -375,7 +378,7 @@ async function exportCSV() {
     csv += `${escapeCsv(date)},${escapeCsv(name)},${present},${escapeCsv(missionary)},${escapeCsv(investigator)},${escapeCsv(visitor)}\n`;
   });
 
-  const fileName = `attendance_${date || "nodate"}.csv`;
+  const fileName = `attendance_${sheetCode}_${date || "nodate"}.csv`;
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const file = new File([blob], fileName, { type: "text/csv" });
 
