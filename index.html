@@ -6,66 +6,92 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
-    font-size: 20px;
-    padding: 15px;
-    line-height: 1.7;
-    letter-spacing: 0.02em;
-    }
+  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+  font-size: 20px;
+  padding: 15px;
+  line-height: 1.7;
+  letter-spacing: 0.02em;
 
-    h1, h2 {
-      margin-bottom: 10px;
-    }
+  background: #f7f9fc;
+  color: #333;
+}
 
-    input[type="checkbox"] {
-      transform: scale(1.5);
-      margin-right: 10px;
-    }
+h1 {
+  color: #2c7be5;
+}
 
-    button {
-      font-size: 20px;
-      padding: 10px;
-      margin-top: 10px;
-      margin-right: 8px;
-    }
+.section {
+  margin-top: 18px;
+  margin-bottom: 18px;
+  padding: 14px;
+  border-radius: 12px;
 
-    input, select {
-      font-size: 18px;
-      margin: 5px 0;
-      padding: 6px;
-    }
+  background: #ffffff;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
 
-    .section {
-      margin-top: 18px;
-      margin-bottom: 18px;
-      padding: 12px;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-    }
+.name-row {
+  margin-bottom: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+}
 
-    .note {
-      font-size: 14px;
-      color: #666;
-      margin-top: 8px;
-    }
+.name-row:hover {
+  background: #eef5ff;
+}
 
-    .name-row {
-      margin-bottom: 8px;
-    }
+input[type="checkbox"] {
+  transform: scale(1.5);
+  margin-right: 10px;
+}
 
-    #comment {
+button {
+  font-size: 18px;
+  padding: 10px 14px;
+  margin-top: 10px;
+  margin-right: 8px;
+
+  border: none;
+  border-radius: 8px;
+
+  background: #2c7be5;
+  color: white;
+
+  cursor: pointer;
+}
+
+button:hover {
+  background: #1a68d1;
+}
+
+select, input {
+  font-size: 18px;
+  padding: 6px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+
+  background: white;
+  color: #333;
+}
+
+#comment {
   width: 100%;
   font-size: 18px;
   padding: 8px;
-  box-sizing: border-box;
 
   border: none;
   outline: none;
   background: transparent;
+  color: #333;
 }
 
 #comment::placeholder {
   color: #aaa;
+}
+
+.note {
+  font-size: 14px;
+  color: #888;
 }
   </style>
 
@@ -130,8 +156,8 @@
 
 
   <script>
-    let names = [];
-    let attendance = {};
+   let members = [];
+   let attendance = {};
 
     // =========================
     // ここを自分のシート情報に合わせる
@@ -233,7 +259,7 @@ document.getElementById("visitor").onchange = () => {
   }
 }
 
-   function parseFilteredNameList(text, targetCodes) {
+   function parseFilteredMembers(text, targetCodes) {
   const lines = text
     .replace(/^\uFEFF/, "")
     .split(/\r?\n/)
@@ -251,46 +277,55 @@ document.getElementById("visitor").onchange = () => {
 
     const fullName = (cols[0] || "").trim();
     const groupCode = (cols[1] || "").trim().toUpperCase();
+    const ysaValue = (cols[2] || "").trim();
+    const peValue = (cols[3] || "").trim();
 
     if (!fullName) return;
 
+    const member = {
+      name: fullName,
+      group: groupCode,
+      ysa: ysaValue === "1" ? 1 : 0,
+      pe: peValue === "1" ? 1 : 0
+    };
+
     // 聖餐会は全員
     if (normalizedCodes.includes("ALL")) {
-      result.push(fullName);
+      result.push(member);
       return;
     }
 
     // 所属一致なら追加
     if (normalizedCodes.includes(groupCode)) {
-      result.push(fullName);
+      result.push(member);
     }
   });
 
   return result;
 }
 
-
     
 
-    function loadCsvText(text, sourceName = "", targetCodes = []) {
-  const parsedNames = parseFilteredNameList(text, targetCodes);
+  function loadCsvText(text, sourceName = "", targetCodes = []) {
+  const parsedMembers = parseFilteredMembers(text, targetCodes);
 
-  if (parsedNames.length === 0) {
+  if (parsedMembers.length === 0) {
     alert("名簿データを読み取れませんでした");
     return;
   }
 
-  names = parsedNames;
+  members = parsedMembers;
 
   const oldAttendance = attendance;
   attendance = {};
 
-  names.forEach(name => {
-    attendance[name] = oldAttendance[name] || false;
+  members.forEach(member => {
+    attendance[member.name] = oldAttendance[member.name] || false;
   });
 
   render();
-
+  
+  
   if (sourceName) {
     document.getElementById("currentSource").textContent = "現在の名簿: " + sourceName;
   }
@@ -329,26 +364,26 @@ document.getElementById("visitor").onchange = () => {
   const list = document.getElementById("list");
   list.innerHTML = "";
 
-  names.forEach(name => {
+  members.forEach(member => {
     const div = document.createElement("div");
     div.className = "name-row";
 
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
-    checkbox.checked = attendance[name] || false;
+    checkbox.checked = attendance[member.name] || false;
 
     checkbox.onchange = () => {
-      attendance[name] = checkbox.checked;
+      attendance[member.name] = checkbox.checked;
       saveData();
-      updateTotalCount(); // ← 追加
+      updateTotalCount();
     };
 
     div.appendChild(checkbox);
-    div.appendChild(document.createTextNode(" " + name));
+    div.appendChild(document.createTextNode(" " + member.name));
     list.appendChild(div);
   });
 
-  updateTotalCount(); // ← ここも追加
+  updateTotalCount();
 }
    
 async function exportCSV() {
@@ -371,12 +406,12 @@ const sheetIndex = document.getElementById("sheetSelect").value;
 
   let csv = "";
   csv += `comment,${escapeCsv(commentForCsv)}\n`;
-  csv += "date,name,present,missionary,investigator,visitor\n";
+  csv += "date,name,present,group,ysa,pe,missionary,investigator,visitor\n";
 
-  names.forEach(name => {
-    const present = attendance[name] ? 1 : 0;
-    csv += `${escapeCsv(date)},${escapeCsv(name)},${present},${escapeCsv(missionary)},${escapeCsv(investigator)},${escapeCsv(visitor)}\n`;
-  });
+  members.forEach(member => {
+  const present = attendance[member.name] ? 1 : 0;
+  csv += `${escapeCsv(date)},${escapeCsv(member.name)},${present},${escapeCsv(member.group)},${member.ysa},${member.pe},${escapeCsv(missionary)},${escapeCsv(investigator)},${escapeCsv(visitor)}\n`;
+});
 
   const fileName = `attendance_${sheetCode}_${date || "nodate"}.csv`;
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -432,9 +467,9 @@ function resetAll() {
   if (!confirm("すべてリセットして今日の日付にしますか？")) return;
 
   // 出席チェックを全部外す
-  names.forEach(name => {
-    attendance[name] = false;
-  });
+  members.forEach(member => {
+  attendance[member.name] = false;
+});
 
   // 人数リセット
   document.getElementById("missionary").value = 0;
@@ -467,15 +502,15 @@ function resetAll() {
 
    function saveData() {
   const data = {
-    names: names,
-    attendance: attendance,
-    missionary: document.getElementById("missionary").value,
-    investigator: document.getElementById("investigator").value,
-    visitor: document.getElementById("visitor").value,
-    comment: document.getElementById("comment").value,
-    date: document.getElementById("date").value,
-    currentSourceText: document.getElementById("currentSource").textContent
-  };
+  members: members,
+  attendance: attendance,
+  missionary: document.getElementById("missionary").value,
+  investigator: document.getElementById("investigator").value,
+  visitor: document.getElementById("visitor").value,
+  comment: document.getElementById("comment").value,
+  date: document.getElementById("date").value,
+  currentSourceText: document.getElementById("currentSource").textContent
+};
 
   localStorage.setItem("attendanceData", JSON.stringify(data));
 }
@@ -486,7 +521,7 @@ function resetAll() {
 
   const data = JSON.parse(saved);
 
-  names = data.names || [];
+  members = data.members || [];
   attendance = data.attendance || {};
 
   document.getElementById("missionary").value = data.missionary || 0;
@@ -506,10 +541,9 @@ function resetAll() {
 function updateTotalCount() {
   // ✓の人数
   let presentCount = 0;
-  names.forEach(name => {
-    if (attendance[name]) presentCount++;
+  members.forEach(member => {
+  if (attendance[member.name]) presentCount++;
   });
-
   // 各人数
   const missionary = parseInt(document.getElementById("missionary").value || 0);
   const investigator = parseInt(document.getElementById("investigator").value || 0);
