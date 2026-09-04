@@ -100,6 +100,20 @@ select, input {
   font-size: 14px;
   color: #888;
 }
+
+#currentSource {
+  font-size: 24px;
+  font-weight: bold;
+  color: #ffffff;
+  background: #2c7be5;
+
+  padding: 10px 16px;
+  margin-bottom: 15px;
+
+  border-radius: 8px;
+  display: inline-block;
+}
+
   </style>
 
   <link rel="manifest" href="manifest.json">
@@ -134,7 +148,7 @@ select, input {
 
   <div class="section">
     <h2>名簿</h2>
-    <div id="currentSource" class="note">現在の名簿: なし</div>
+    <div id="currentSource" >現在の名簿: なし</div>
     <div id="list"></div>
   </div>
 
@@ -165,7 +179,7 @@ select, input {
   <script>
    let members = [];
    let attendance = {};
-   const APP_VERSION = "v1.4";
+   const APP_VERSION = "v1.5";
 
     // =========================
     // ここを自分のシート情報に合わせる
