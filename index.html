@@ -180,7 +180,7 @@ select, input {
   <script>
    let members = [];
    let attendance = {};
-   const APP_VERSION = "v1.5";
+   const APP_VERSION = "v1.6";
 
     // =========================
     // ここを自分のシート情報に合わせる
@@ -435,6 +435,7 @@ const sheetIndex = document.getElementById("sheetSelect").value;
 
   let csv = "";
   csv += `comment,${escapeCsv(commentForCsv)}\n`;
+  csv += `source,${escapeCsv(sheetCode)}\n`;
   csv += "date,name,present,group,ysa,pe,baby,missionary,investigator,visitor\n";
 
   members.forEach(member => {
