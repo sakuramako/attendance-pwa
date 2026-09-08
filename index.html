@@ -102,17 +102,48 @@ select, input {
 }
 
 #currentSource {
-  font-size: 17px;
+  font-size: 28px;
   font-weight: bold;
-  color: #2c7be5;
+  color: #333;
 
-  background: #eef5ff;
-  border-left: 5px solid #2c7be5;
+  padding: 10px 14px;
+  margin: 0 0 14px 0;
 
-  padding: 6px 10px;
-  margin: 6px 0 14px 0;
+  border-radius: 8px;
+}
 
-  border-radius: 4px;
+/* 名簿ごとの背景色 */
+.source-SAC {
+  background: #f3e5c8;   /* 聖餐会：ベージュ */
+}
+
+.source-SS {
+  background: #a98262;   /* 日曜学校：茶色 */
+  color: white !important;
+}
+
+.source-EQ {
+  background: #b9d7ff;   /* 神権会：青 */
+}
+
+.source-RS {
+  background: #f5b5b5;   /* 扶助協会：赤 */
+}
+
+.source-SSY {
+  background: #fff1a8;   /* 青少年日曜学校：黄色 */
+}
+
+.source-YM {
+  background: #c8ecff;   /* アロン神権定員会：水色 */
+}
+
+.source-YW {
+  background: #ffd1e1;   /* 若い女性：ピンク */
+}
+
+.source-PR {
+  background: #ffd09b;   /* プライマリー：オレンジ */
 }
 
   </style>
@@ -147,11 +178,10 @@ select, input {
 
   
 
-  <div class="section">
-    <h2>名簿</h2>
-    <div id="currentSource" >現在の名簿: なし</div>
-    <div id="list"></div>
-  </div>
+<div class="section">
+  <div id="currentSource">なし</div>
+  <div id="list"></div>
+</div>
 
 <div id="extraCounts" style="margin-top:20px;">
 
@@ -181,7 +211,7 @@ select, input {
   let members = [];
   let attendance = {};
   let currentSheetCode = "";
-  const APP_VERSION = "v1.61";
+  const APP_VERSION = "v1.7";
 
     // =========================
     // ここを自分のシート情報に合わせる
@@ -357,12 +387,32 @@ document.getElementById("visitor").onchange = () => {
   
   
   if (sourceName) {
-  document.getElementById("currentSource").textContent = "現在の名簿: " + sourceName;
-  }
+  const currentSource = document.getElementById("currentSource");
 
+  // 名簿名だけを表示
+  currentSource.textContent = sourceName;
+
+  // 以前の名簿色をすべて削除
+  currentSource.classList.remove(
+    "source-SAC",
+    "source-SS",
+    "source-EQ",
+    "source-RS",
+    "source-SSY",
+    "source-YM",
+    "source-YW",
+    "source-PR"
+  );
+
+  // 今回読み込んだ名簿の色を設定
   if (sourceCode) {
-    currentSheetCode = sourceCode;
+    currentSource.classList.add("source-" + sourceCode);
   }
+}
+
+if (sourceCode) {
+  currentSheetCode = sourceCode;
+}
 
   saveData();
 }
@@ -564,10 +614,16 @@ function resetAll() {
   document.getElementById("date").value = data.date || "";
 
   if (data.currentSourceText) {
-    document.getElementById("currentSource").textContent = data.currentSourceText;
-  }
+  document.getElementById("currentSource").textContent = data.currentSourceText;
+}
 
-  currentSheetCode = data.currentSheetCode || "";
+currentSheetCode = data.currentSheetCode || "";
+
+if (currentSheetCode) {
+  document.getElementById("currentSource")
+    .classList.add("source-" + currentSheetCode);
+}
+
 
   render();
   updateTotalCount();
