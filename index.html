@@ -178,9 +178,10 @@ select, input {
 
 
   <script>
-   let members = [];
-   let attendance = {};
-   const APP_VERSION = "v1.6";
+  let members = [];
+  let attendance = {};
+  let currentSheetCode = "";
+  const APP_VERSION = "v1.61";
 
     // =========================
     // ここを自分のシート情報に合わせる
@@ -278,7 +279,7 @@ document.getElementById("visitor").onchange = () => {
     }
 
     const text = await response.text();
-    loadCsvText(text, sheet.name, sheet.codes);
+    loadCsvText(text, sheet.name, sheet.codes, sheet.short);
     alert(sheet.name + " を読み込みました");
   } catch (error) {
     console.error(error);
@@ -335,7 +336,7 @@ document.getElementById("visitor").onchange = () => {
 
     
 
-  function loadCsvText(text, sourceName = "", targetCodes = []) {
+  function loadCsvText(text, sourceName = "", targetCodes = [], sourceCode = "") {
   const parsedMembers = parseFilteredMembers(text, targetCodes);
 
   if (parsedMembers.length === 0) {
@@ -356,7 +357,11 @@ document.getElementById("visitor").onchange = () => {
   
   
   if (sourceName) {
-    document.getElementById("currentSource").textContent = "現在の名簿: " + sourceName;
+  document.getElementById("currentSource").textContent = "現在の名簿: " + sourceName;
+  }
+
+  if (sourceCode) {
+    currentSheetCode = sourceCode;
   }
 
   saveData();
@@ -420,9 +425,7 @@ async function exportCSV() {
   const missionary = document.getElementById("missionary").value;
   const investigator = document.getElementById("investigator").value;
   const visitor = document.getElementById("visitor").value;
-const sheetIndex = document.getElementById("sheetSelect").value;
-  const sheet = SHEETS[sheetIndex];
-  const sheetCode = sheet?.short || "UNK";
+  const sheetCode = currentSheetCode || "UNK";
 
   const commentRaw = document.getElementById("comment")
     ? document.getElementById("comment").value
@@ -538,7 +541,8 @@ function resetAll() {
   visitor: document.getElementById("visitor").value,
   comment: document.getElementById("comment").value,
   date: document.getElementById("date").value,
-  currentSourceText: document.getElementById("currentSource").textContent
+  currentSourceText: document.getElementById("currentSource").textContent,
+  currentSheetCode: currentSheetCode
 };
 
   localStorage.setItem("attendanceData", JSON.stringify(data));
@@ -562,6 +566,8 @@ function resetAll() {
   if (data.currentSourceText) {
     document.getElementById("currentSource").textContent = data.currentSourceText;
   }
+
+  currentSheetCode = data.currentSheetCode || "";
 
   render();
   updateTotalCount();
